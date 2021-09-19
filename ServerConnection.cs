@@ -7,7 +7,7 @@ using System.Threading;
 
 public static class ServerConnection 
 {
-    static int port = 1420;
+    public static int Port = 1420;
     public static Socket Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     public static IPAddress ServerAddress;
     public static void ConnectToServer()
@@ -18,7 +18,7 @@ public static class ServerConnection
         if (!IPAddress.TryParse(ip, out ServerAddress))
             goto Error;
 
-        var point = new IPEndPoint(ServerAddress, port);
+        var point = new IPEndPoint(ServerAddress, Port);
         
         if (Socket != null)
             Socket.Dispose();

@@ -12,6 +12,8 @@ public static class ShareScreen
 {
     public static bool Running = false;
     public static Socket Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+    static Graphics captureGraphics;
+    static Bitmap captureBitmap;
     public static void StartShareScreen()
     {
         if (!Running) 
@@ -22,12 +24,11 @@ public static class ShareScreen
                 try
                 {
                     Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    Socket.Connect(new IPEndPoint(ServerConnection.ServerAddress, 1421));
+                    Socket.Connect(new IPEndPoint(ServerConnection.ServerAddress, ServerConnection.Port+1));
                     while (Running)
                     {
-
                         SendImage();
-                        Thread.Sleep(100);
+                        Thread.Sleep(60);
                     }
                 }
                 catch(Exception ex)
@@ -39,30 +40,34 @@ public static class ShareScreen
             }).Start();   
         }
     }
-
+    static MemoryStream ms;
     static void SendImage()
     {
-        Bitmap captureBitmap = new Bitmap(Screen.AllScreens[0].Bounds.Width, Screen.AllScreens[0].Bounds.Height, PixelFormat.Format16bppRgb555);
+        Screen MainScreen = Screen.AllScreens[0];
 
-        Rectangle captureRectangle = Screen.AllScreens[0].Bounds;
-        Graphics captureGraphics = Graphics.FromImage(captureBitmap);
+        captureBitmap = new Bitmap(MainScreen.Bounds.Width, MainScreen.Bounds.Height, PixelFormat.Format16bppRgb555);
+        captureGraphics = Graphics.FromImage(captureBitmap);
+        Rectangle captureRectangle = MainScreen.Bounds;
         captureGraphics.CopyFromScreen(captureRectangle.Left, captureRectangle.Top, 0, 0, captureRectangle.Size);
-        MemoryStream ms = new MemoryStream();
-        captureBitmap.Save(ms, ImageFormat.Png);
-        byte[] buffer = ms.ToArray();
-        try
+        var resized = new Bitmap(captureBitmap, new Size(1280, 720));
+        captureBitmap.Dispose();
+
+        ms = new MemoryStream();
+        resized.Save(ms, ImageFormat.Jpeg);
+
+        resized.Dispose();
+        captureBitmap.Dispose();
+        captureGraphics.Dispose();
+        byte[] Buffer = ms.ToArray();
+        ms.Dispose();
+        try 
         {
-            Socket.Send(buffer);
+            Socket.Send(Buffer);
         }
-        catch (SocketException)
+        catch(SocketException) 
         {
             Running = false;
         }
-
-        captureBitmap.Dispose();
-        captureGraphics.Dispose();
-        buffer = null;
-        ms.Close();
-        ms.Dispose();
+        Buffer = null;
     }
 }
